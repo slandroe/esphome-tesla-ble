@@ -714,7 +714,7 @@ void TeslaChargingAmpsNumber::control(float value) {
 
 void TeslaChargingAmpsNumber::update_max_value(int32_t new_max) {
     auto old_max = this->traits.get_max_value();
-    ESP_LOGI(TAG, "Shall be updating charging amps max from %.0f to %.0f A", old_max, new_max);
+    ESP_LOGI(TAG, "Shall be updating charging amps max from %.0f to %.0f A", double(old_max), double(new_max));
     
     // Skip update if new_max is 0 or invalid - likely not ready or invalid value
     if (new_max <= 0) {
@@ -723,18 +723,18 @@ void TeslaChargingAmpsNumber::update_max_value(int32_t new_max) {
     }
     
     if (std::abs(old_max - new_max) > 0.1f) {
-        ESP_LOGD(TAG, "Updating charging amps max from %.0f to %.0f A", old_max, new_max);
+        ESP_LOGD(TAG, "Updating charging amps max from %.0f to %.0f A", double(old_max), double(new_max));
         
         // Update the traits
         this->traits.set_max_value(new_max);
         
         // Clamp current value if it exceeds new max
         if (this->has_state() && this->state > new_max) {
-            ESP_LOGD(TAG, "Clamping current value from %.0f to %.0f A", this->state, new_max);
+            ESP_LOGD(TAG, "Clamping current value from %.0f to %.0f A", double(this->state), double(new_max));
             this->publish_state(new_max);
         }
         
-        ESP_LOGW(TAG, "Max charging amps updated to %.0f A - you may need to restart the ESPHome device or reload the ESPHome integration in Home Assistant to see the updated UI limit", new_max);
+        ESP_LOGW(TAG, "Max charging amps updated to %.0f A - you may need to restart the ESPHome device or reload the ESPHome integration in Home Assistant to see the updated UI limit", double(new_max));
         
         // Republish current state to ensure it's visible
         if (this->has_state()) {
@@ -754,7 +754,7 @@ void TeslaChargingLimitNumber::control(float value) {
     float max_val = this->traits.get_max_value();
     
     if (value < min_val || value > max_val) {
-        ESP_LOGW(TAG, "Charging limit value %.1f out of bounds [%.1f, %.1f]", value, min_val, max_val);
+        ESP_LOGW(TAG, "Charging limit value %.1f out of bounds [%.1f, %.1f]", double(value), double(min_val), double(max_val));
         return;
     }
     
