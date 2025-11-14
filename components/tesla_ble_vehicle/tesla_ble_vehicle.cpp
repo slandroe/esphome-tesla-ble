@@ -739,6 +739,8 @@ void TeslaChargingAmpsNumber::update_max_value(int32_t new_max) {
         // Republish current state to ensure it's visible
         if (this->has_state()) {
             this->publish_state(this->state);
+        } else {
+            this->publish_state(0);
         }
     }
 }
