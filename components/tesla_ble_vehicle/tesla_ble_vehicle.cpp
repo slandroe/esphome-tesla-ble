@@ -524,9 +524,11 @@ void TeslaBLEVehicle::update_charging_amps_max_value(int32_t new_max) {
         // Cast to our known type - this is safe since we control the creation
         auto* tesla_amps = static_cast<TeslaChargingAmpsNumber*>(pending_charging_amps_number_);
         tesla_amps->update_max_value(new_max);
-        ESP_LOGD(TAG, "Updated charging amps max value to %d A", new_max);
+        // ESP_LOGD(TAG, "Updated charging amps max value to %d A", new_max);
+        ESP_LOGI(TAG, "Updated charging amps max value to %d A", new_max);
     } else {
-        ESP_LOGW(TAG, "Charging amps number component not available for max value update");
+        // ESP_LOGW(TAG, "Charging amps number component not available for max value update");
+        ESP_LOGI(TAG, "Charging amps number component not available for max value update");
     }
 }
 
@@ -711,13 +713,14 @@ void TeslaChargingAmpsNumber::control(float value) {
 }
 
 void TeslaChargingAmpsNumber::update_max_value(int32_t new_max) {
+    auto old_max = this->traits.get_max_value();
+    ESP_LOGI(TAG, "Shall be updating charging amps max from %.0f to %.0f A", old_max, new_max);
+    
     // Skip update if new_max is 0 or invalid - likely not ready or invalid value
     if (new_max <= 0) {
         ESP_LOGV(TAG, "Skipping charging amps max update - invalid value: %d A", new_max);
         return;
     }
-    
-    auto old_max = this->traits.get_max_value();
     
     if (std::abs(old_max - new_max) > 0.1f) {
         ESP_LOGD(TAG, "Updating charging amps max from %.0f to %.0f A", old_max, new_max);
