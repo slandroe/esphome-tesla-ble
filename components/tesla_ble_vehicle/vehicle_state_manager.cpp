@@ -224,11 +224,13 @@ void VehicleStateManager::update_charge_state(const CarServer_ChargeState& charg
     // Update max charging amps if available
     if (charge_state.which_optional_charge_current_request_max) {
         int32_t new_max = charge_state.optional_charge_current_request_max.charge_current_request_max;
-        ESP_LOGD(STATE_MANAGER_TAG, "Received max charging amps from vehicle: %d A (current stored: %d A)", new_max, charging_amps_max_);
+        // ESP_LOGD(STATE_MANAGER_TAG, "Received max charging amps from vehicle: %d A (current stored: %d A)", new_max, charging_amps_max_);
+        ESP_LOGI(STATE_MANAGER_TAG, "Received max charging amps from vehicle: %d A (current stored: %d A)", new_max, charging_amps_max_);
         
         // Skip update if new_max is 0 or invalid - likely not ready or invalid value from vehicle
         if (new_max <= 0) {
-            ESP_LOGV(STATE_MANAGER_TAG, "Skipping max charging amps update - invalid value from vehicle: %d A", new_max);
+            // ESP_LOGV(STATE_MANAGER_TAG, "Skipping max charging amps update - invalid value from vehicle: %d A", new_max);
+            ESP_LOGI(STATE_MANAGER_TAG, "Skipping max charging amps update - invalid value from vehicle: %d A", new_max);
         // We don't trust the stored charging_amps_max_
         } else //if (new_max != charging_amps_max_) {
             update_charging_amps_max(new_max); // Will be validated by update...()
@@ -372,12 +374,15 @@ void VehicleStateManager::update_charging_amps_max(int32_t new_max) {
         // Ask the parent to update the max value since it knows about Tesla-specific types
         if (parent_) {
             parent_->update_charging_amps_max_value(new_max);
-            ESP_LOGD(STATE_MANAGER_TAG, "Updated max charging amps from %.0f to %d A via parent", old_trait_max, new_max);
+            // ESP_LOGD(STATE_MANAGER_TAG, "Updated max charging amps from %.0f to %d A via parent", old_trait_max, new_max);
+            ESP_LOGI(STATE_MANAGER_TAG, "Updated max charging amps from %.0f to %d A via parent", old_trait_max, new_max);
         } else {
-            ESP_LOGW(STATE_MANAGER_TAG, "Parent not available to update max charging amps");
+            // ESP_LOGW(STATE_MANAGER_TAG, "Parent not available to update max charging amps");
+            ESP_LOGI(STATE_MANAGER_TAG, "Parent not available to update max charging amps");
         }
     } else {
-        ESP_LOGD(STATE_MANAGER_TAG, "Max charging amps set to %d A (no component to update)", new_max);
+        // ESP_LOGD(STATE_MANAGER_TAG, "Max charging amps set to %d A (no component to update)", new_max);
+        ESP_LOGI(STATE_MANAGER_TAG, "Max charging amps set to %d A (no component to update)", new_max);
     }
 }
 
