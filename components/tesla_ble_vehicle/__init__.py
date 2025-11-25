@@ -202,6 +202,17 @@ async def to_code(config):
         CONF_DEVICE_CLASS: sensor.DEVICE_CLASS_CURRENT,
     })
     cg.add(var.set_charger_current_sensor(charger_current_sensor))
+    
+    max_charger_current_sensor = await sensor.new_sensor({
+        CONF_ID: cv.declare_id(sensor.Sensor)("tesla_max_charger_current_sensor"),
+        CONF_NAME: "Max Charger Current",
+        CONF_ICON: "mdi:current-ac",
+        CONF_DISABLED_BY_DEFAULT: False,
+        CONF_FORCE_UPDATE: False,
+        CONF_UNIT_OF_MEASUREMENT: "A",
+        CONF_DEVICE_CLASS: sensor.DEVICE_CLASS_CURRENT,
+    })
+    cg.add(var.set_max_charger_current_sensor(max_charger_current_sensor))
 
     charging_rate_sensor = await sensor.new_sensor({
         CONF_ID: cv.declare_id(sensor.Sensor)("tesla_charging_rate_sensor"),

@@ -39,6 +39,7 @@ public:
     void set_charger_power_sensor(sensor::Sensor* sensor) { charger_power_sensor_ = sensor; }
     void set_charger_voltage_sensor(sensor::Sensor* sensor) { charger_voltage_sensor_ = sensor; }
     void set_charger_current_sensor(sensor::Sensor* sensor) { charger_current_sensor_ = sensor; }
+    void set_max_charger_current_sensor(sensor::Sensor* sensor) { max_charger_current_sensor_ = sensor; }
     void set_charging_rate_sensor(sensor::Sensor* sensor) { charging_rate_sensor_ = sensor; }
     void set_charging_state_sensor(text_sensor::TextSensor* sensor) { charging_state_sensor_ = sensor; }
     
@@ -103,6 +104,7 @@ private:
     sensor::Sensor* charger_power_sensor_{nullptr};
     sensor::Sensor* charger_voltage_sensor_{nullptr};
     sensor::Sensor* charger_current_sensor_{nullptr};
+    sensor::Sensor* max_charger_current_sensor_{nullptr};
     sensor::Sensor* charging_rate_sensor_{nullptr};
     
     // Text sensors

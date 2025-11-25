@@ -111,6 +111,10 @@ void TeslaBLEVehicle::configure_pending_sensors() {
             ESP_LOGD(TAG, "Configuring charger current sensor");
             state_manager_->set_charger_current_sensor(pending_charger_current_sensor_);
         }
+        if (pending_max_charger_current_sensor_) {
+            ESP_LOGD(TAG, "Configuring max charger current sensor");
+            state_manager_->set_max_charger_current_sensor(pending_max_charger_current_sensor_);
+        }
         if (pending_charging_rate_sensor_) {
             ESP_LOGD(TAG, "Configuring charging rate sensor");
             state_manager_->set_charging_rate_sensor(pending_charging_rate_sensor_);
@@ -302,6 +306,11 @@ void TeslaBLEVehicle::set_charger_voltage_sensor(sensor::Sensor *sensor) {
 void TeslaBLEVehicle::set_charger_current_sensor(sensor::Sensor *sensor) {
     pending_charger_current_sensor_ = sensor;
     if (state_manager_) state_manager_->set_charger_current_sensor(sensor);
+}
+
+void TeslaBLEVehicle::set_max_charger_current_sensor(sensor::Sensor *sensor) {
+    pending_max_charger_current_sensor_ = sensor;
+    if (state_manager_) state_manager_->set_max_charger_current_sensor(sensor);
 }
 
 void TeslaBLEVehicle::set_charging_rate_sensor(sensor::Sensor *sensor) {
@@ -524,6 +533,11 @@ void TeslaBLEVehicle::update_charging_amps_max_value(int32_t new_max) {
         // Cast to our known type - this is safe since we control the creation
         auto* tesla_amps = static_cast<TeslaChargingAmpsNumber*>(pending_charging_amps_number_);
         tesla_amps->update_max_value(new_max);
+        //publish to the max_charger_current_sensor
+        if (pending_max_charger_current_sensor_) {
+            ESP_LOGI(TAG, "Setting max_charger_current_sensor to %.0f A", double(new_max));
+            pending_max_charger_current_sensor_->publish_state(new_max);
+        }
         // ESP_LOGD(TAG, "Updated charging amps max value to %d A", new_max);
         ESP_LOGI(TAG, "Updated charging amps max value to %d A", new_max);
     } else {
@@ -739,9 +753,7 @@ void TeslaChargingAmpsNumber::update_max_value(int32_t new_max) {
         // Republish current state to ensure it's visible
         if (this->has_state()) {
             this->publish_state(this->state);
-        } else {
-            this->publish_state(0);
-        }
+        } 
     }
 }
 
