@@ -293,7 +293,7 @@ void CommandManager::initiate_wake_sequence(BLECommand& command) {
     
     // Execute wake command directly to avoid recursive queue operations
     auto wake_command = create_command(parent_, [](auto* client, auto* buffer, auto* length) {
-        return client->buildVCSECActionMessage(
+        return client->build_vcsec_action_message(
             VCSEC_RKEAction_E_RKE_ACTION_WAKE_VEHICLE,
             buffer, length);
     });
@@ -445,7 +445,7 @@ void CommandManager::enqueue_wake_vehicle() {
     enqueue_command(
         UniversalMessage_Domain_DOMAIN_VEHICLE_SECURITY,
         create_command(parent_, [](auto* client, auto* buffer, auto* length) {
-            return client->buildVCSECActionMessage(
+            return client->build_vcsec_action_message(
                 VCSEC_RKEAction_E_RKE_ACTION_WAKE_VEHICLE,
                 buffer, length);
         }),
@@ -457,7 +457,7 @@ void CommandManager::enqueue_vcsec_poll() {
     enqueue_command(
         UniversalMessage_Domain_DOMAIN_VEHICLE_SECURITY,
         create_command(parent_, [](auto* client, auto* buffer, auto* length) {
-            return client->buildVCSECInformationRequestMessage(
+            return client->build_vcsec_information_request_message(
                 VCSEC_InformationRequestType_INFORMATION_REQUEST_TYPE_GET_STATUS,
                 buffer, length);
         }),
@@ -469,7 +469,7 @@ void CommandManager::enqueue_infotainment_poll() {
     enqueue_command(
         UniversalMessage_Domain_DOMAIN_INFOTAINMENT,
         create_command(parent_, [](auto* client, auto* buffer, auto* length) {
-            return client->buildCarServerGetVehicleDataMessage(
+            return client->build_car_server_get_vehicle_data_message(
                 buffer, length, CarServer_GetVehicleData_getChargeState_tag);
         }),
         "infotainment data poll"
@@ -482,7 +482,7 @@ void CommandManager::enqueue_set_charging_state(bool enable) {
         create_command(parent_, [enable](auto* client, auto* buffer, auto* length) {
             // Use Tesla's standard charging start/stop action with proper enum values
             int32_t action = enable ? 1 : 0;  // 1 = start, 0 = stop
-            return client->buildCarServerVehicleActionMessage(
+            return client->build_car_server_vehicle_action_message(
                 buffer, length,
                 CarServer_VehicleAction_chargingStartStopAction_tag,
                 &action);
@@ -496,7 +496,7 @@ void CommandManager::enqueue_set_charging_amps(int amps) {
         UniversalMessage_Domain_DOMAIN_INFOTAINMENT,
         create_command(parent_, [amps](auto* client, auto* buffer, auto* length) {
             int32_t amps_param = static_cast<int32_t>(amps);
-            return client->buildCarServerVehicleActionMessage(
+            return client->build_car_server_vehicle_action_message(
                 buffer, length,
                 CarServer_VehicleAction_setChargingAmpsAction_tag,
                 &amps_param);
@@ -510,7 +510,7 @@ void CommandManager::enqueue_set_charging_limit(int limit) {
         UniversalMessage_Domain_DOMAIN_INFOTAINMENT,
         create_command(parent_, [limit](auto* client, auto* buffer, auto* length) {
             int32_t limit_param = static_cast<int32_t>(limit);
-            return client->buildCarServerVehicleActionMessage(
+            return client->build_car_server_vehicle_action_message(
                 buffer, length,
                 CarServer_VehicleAction_chargingSetLimitAction_tag,
                 &limit_param);

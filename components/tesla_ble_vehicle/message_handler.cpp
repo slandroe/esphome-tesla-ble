@@ -106,7 +106,7 @@ void MessageHandler::handle_vcsec_message(const UniversalMessage_RoutableMessage
     }
     
     VCSEC_FromVCSECMessage vcsec_message = VCSEC_FromVCSECMessage_init_default;
-    int result = client->parseFromVCSECMessage(
+    int result = client->parse_from_vcsec_message(
         const_cast<UniversalMessage_RoutableMessage_protobuf_message_as_bytes_t*>(&message.payload.protobuf_message_as_bytes), &vcsec_message);
     
     if (result != 0) {
@@ -143,18 +143,7 @@ void MessageHandler::handle_vcsec_message(const UniversalMessage_RoutableMessage
             break;
             
         default:
-            // Probably information request with public key
-            VCSEC_InformationRequest info_message = VCSEC_InformationRequest_init_default;
-            result = client->parseVCSECInformationRequest(
-                const_cast<UniversalMessage_RoutableMessage_protobuf_message_as_bytes_t*>(&message.payload.protobuf_message_as_bytes), &info_message);
-            
-            if (result == 0) {
-                ESP_LOGD(MESSAGE_HANDLER_TAG, "Parsed VCSEC InformationRequest message");
-                ESP_LOGD(MESSAGE_HANDLER_TAG, "InformationRequest public key: %s", 
-                         format_hex(info_message.key.publicKey.bytes, info_message.key.publicKey.size).c_str());
-            } else {
-                ESP_LOGW(MESSAGE_HANDLER_TAG, "Unknown VCSEC message type");
-            }
+            ESP_LOGW(MESSAGE_HANDLER_TAG, "Unknown VCSEC message type");
             break;
     }
 }
@@ -193,13 +182,17 @@ void MessageHandler::handle_carserver_message(const UniversalMessage_RoutableMes
         ESP_LOGW(MESSAGE_HANDLER_TAG, "Message fault detected: %s", message_fault_to_string(fault));
     }
     
-    ESP_LOGD(MESSAGE_HANDLER_TAG, "Starting parsePayloadCarServerResponse...");
+    ESP_LOGD(MESSAGE_HANDLER_TAG, "Starting parse_payload_car_server_response...");
     ESP_LOGD(MESSAGE_HANDLER_TAG, "Payload size: %d bytes", message.payload.protobuf_message_as_bytes.size);
     
-    int result = session_manager->get_client()->parsePayloadCarServerResponse(
-        const_cast<UniversalMessage_RoutableMessage_protobuf_message_as_bytes_t*>(&message.payload.protobuf_message_as_bytes), const_cast<Signatures_SignatureData*>(sig_data), message.which_sub_sigData, fault, &carserver_response);
+    uint32_t response_flags = 0;
+    uint32_t response_counter = 0;
+    int result = session_manager->get_client()->parse_payload_car_server_response(
+        const_cast<UniversalMessage_RoutableMessage_protobuf_message_as_bytes_t*>(&message.payload.protobuf_message_as_bytes),
+        const_cast<Signatures_SignatureData*>(sig_data), message.which_sub_sigData, fault,
+        response_flags, &carserver_response, &response_counter);
     
-    ESP_LOGD(MESSAGE_HANDLER_TAG, "parsePayloadCarServerResponse completed with return_code: %d", result);
+    ESP_LOGD(MESSAGE_HANDLER_TAG, "parse_payload_car_server_response completed with return_code: %d", result);
     
     if (result != 0) {
         ESP_LOGE(MESSAGE_HANDLER_TAG, "Failed to parse CarServer response: %d", result);
@@ -274,7 +267,7 @@ void MessageHandler::handle_session_info(const UniversalMessage_RoutableMessage&
     
     // Parse session info
     Signatures_SessionInfo session_info = Signatures_SessionInfo_init_default;
-    int result = session_manager->get_client()->parsePayloadSessionInfo(const_cast<UniversalMessage_RoutableMessage_session_info_t*>(&message.payload.session_info), &session_info);
+    int result = session_manager->get_client()->parse_payload_session_info(const_cast<UniversalMessage_RoutableMessage_session_info_t*>(&message.payload.session_info), &session_info);
     
     if (result != 0) {
         ESP_LOGE(MESSAGE_HANDLER_TAG, "Failed to parse session info for %s: %d", domain_to_string(domain), result);

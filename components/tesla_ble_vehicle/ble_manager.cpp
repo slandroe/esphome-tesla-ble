@@ -191,7 +191,7 @@ void BLEManager::process_complete_message() {
         
         auto* tesla_client = parent_->get_session_manager()->get_client();
         if (tesla_client) {
-            int result = tesla_client->parseUniversalMessageBLE(
+            int result = tesla_client->parse_universal_message_ble(
                 read_buffer_.data(), read_buffer_.size(), &message);
             
             if (result == 0) {

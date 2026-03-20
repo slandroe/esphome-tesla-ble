@@ -81,7 +81,7 @@ bool SessionManager::initialize_nvs() {
 bool SessionManager::create_private_key() {
     ESP_LOGI(SESSION_MANAGER_TAG, "Creating new private key");
     
-    int result = tesla_client_->createPrivateKey();
+    int result = tesla_client_->create_private_key();
     if (result != 0) {
         ESP_LOGE(SESSION_MANAGER_TAG, "Failed to create private key: %d", result);
         return false;
@@ -91,7 +91,7 @@ bool SessionManager::create_private_key() {
     unsigned char private_key_buffer[PRIVATE_KEY_SIZE];
     size_t private_key_length = 0;
     
-    tesla_client_->getPrivateKey(private_key_buffer, sizeof(private_key_buffer), &private_key_length);
+    tesla_client_->get_private_key(private_key_buffer, sizeof(private_key_buffer), &private_key_length);
     
     if (!save_to_nvs(NVS_KEY_PRIVATE_KEY, private_key_buffer, private_key_length)) {
         ESP_LOGE(SESSION_MANAGER_TAG, "Failed to save private key to NVS");
@@ -117,7 +117,7 @@ bool SessionManager::load_private_key() {
         return false;
     }
     
-    int result = tesla_client_->loadPrivateKey(private_key_data.data(), private_key_data.size());
+    int result = tesla_client_->load_private_key(private_key_data.data(), private_key_data.size());
     if (result != 0) {
         ESP_LOGE(SESSION_MANAGER_TAG, "Failed to load private key: %d", result);
         return false;
@@ -149,8 +149,9 @@ bool SessionManager::get_public_key(unsigned char* buffer, size_t* length) {
         return false;
     }
     
-    int result = tesla_client_->getPublicKey(buffer, length);
-    return result == 0;
+    ESP_LOGW(SESSION_MANAGER_TAG, "Public key export is not exposed by the current Tesla BLE client API");
+    *length = 0;
+    return false;
 }
 
 bool SessionManager::load_session_info(UniversalMessage_Domain domain) {
@@ -177,9 +178,9 @@ bool SessionManager::load_session_info(UniversalMessage_Domain domain) {
     log_session_info(session_info);
     
     // Update the Tesla client with the session info
-    auto peer = tesla_client_->getPeer(domain);
+    auto peer = tesla_client_->get_peer(domain);
     if (peer) {
-        peer->updateSession(&session_info);
+        peer->update_session(&session_info);
         ESP_LOGI(SESSION_MANAGER_TAG, "Session info loaded for %s", domain_to_string(domain));
         return true;
     }
@@ -216,7 +217,7 @@ int SessionManager::update_session(const Signatures_SessionInfo& session_info, U
     ESP_LOGD(SESSION_MANAGER_TAG, "Updating session for %s", domain_to_string(domain));
     
     // Get the peer to check current state
-    auto peer = tesla_client_->getPeer(domain);
+    auto peer = tesla_client_->get_peer(domain);
     if (!peer) {
         ESP_LOGE(SESSION_MANAGER_TAG, "Failed to get peer for domain %s", domain_to_string(domain));
         return -1;
@@ -224,10 +225,10 @@ int SessionManager::update_session(const Signatures_SessionInfo& session_info, U
     
     // Log the counter comparison for debugging
     ESP_LOGD(SESSION_MANAGER_TAG, "Session info counter comparison for %s: current=%u, received=%u", 
-             domain_to_string(domain), peer->getCounter(), session_info.counter);
+             domain_to_string(domain), peer->get_counter(), session_info.counter);
     
     // Always try to update with the vehicle's session info first
-    int result = peer->updateSession(const_cast<Signatures_SessionInfo*>(&session_info));
+    int result = peer->update_session(const_cast<Signatures_SessionInfo*>(&session_info));
     
     if (result == 0) {
         // Successful update - save the session info
@@ -241,20 +242,17 @@ int SessionManager::update_session(const Signatures_SessionInfo& session_info, U
         // Counter anti-replay or rollback - the vehicle's session info is the authoritative truth
         // We need to force our session to match the vehicle's state
         ESP_LOGW(SESSION_MANAGER_TAG, "Counter anti-replay detected for %s, forcing session to match vehicle's authoritative state (vehicle counter: %u, our counter: %u)", 
-                 domain_to_string(domain), session_info.counter, peer->getCounter());
+                 domain_to_string(domain), session_info.counter, peer->get_counter());
         
         // Invalidate and erase stored session first
         invalidate_session(domain);
         
         // Force update peer state directly with vehicle's authoritative values
-        peer->setCounter(session_info.counter);
-        peer->setEpoch(session_info.epoch);
-        peer->setTimeZero(std::time(nullptr) - session_info.clock_time);
-        peer->setIsValid(true);
-        
-        // Load Tesla key if provided
-        if (session_info.publicKey.size > 0) {
-            peer->loadTeslaKey(session_info.publicKey.bytes, session_info.publicKey.size);
+        result = peer->force_update_session(const_cast<Signatures_SessionInfo*>(&session_info));
+        if (result != 0) {
+            ESP_LOGE(SESSION_MANAGER_TAG, "Failed to force session update for %s: %d",
+                     domain_to_string(domain), result);
+            return result;
         }
         
         // Save the authoritative session info from the vehicle
@@ -276,9 +274,9 @@ int SessionManager::update_session(const Signatures_SessionInfo& session_info, U
 void SessionManager::invalidate_session(UniversalMessage_Domain domain) {
     ESP_LOGI(SESSION_MANAGER_TAG, "Invalidating session for %s", domain_to_string(domain));
     
-    auto peer = tesla_client_->getPeer(domain);
+    auto peer = tesla_client_->get_peer(domain);
     if (peer) {
-        peer->setIsValid(false);
+        peer->set_is_valid(false);
     }
     
     // Optionally remove from NVS
@@ -290,8 +288,8 @@ void SessionManager::invalidate_session(UniversalMessage_Domain domain) {
 }
 
 bool SessionManager::is_domain_authenticated(UniversalMessage_Domain domain) {
-    auto peer = tesla_client_->getPeer(domain);
-    return peer ? peer->isInitialized() : false;
+    auto peer = tesla_client_->get_peer(domain);
+    return peer ? peer->is_initialized() : false;
 }
 
 bool SessionManager::request_session_info(UniversalMessage_Domain domain) {
@@ -305,7 +303,7 @@ bool SessionManager::request_session_info(UniversalMessage_Domain domain) {
     unsigned char message_buffer[MAX_BLE_MESSAGE_SIZE];
     size_t message_length = 0;
     
-    int result = tesla_client_->buildSessionInfoRequestMessage(domain, message_buffer, &message_length);
+    int result = tesla_client_->build_session_info_request_message(domain, message_buffer, &message_length);
     if (result != 0) {
         ESP_LOGE(SESSION_MANAGER_TAG, "Failed to build session info request: %d", result);
         return false;
@@ -340,7 +338,7 @@ bool SessionManager::start_pairing(const std::string& role) {
     unsigned char whitelist_message_buffer[MAX_BLE_MESSAGE_SIZE];
     size_t whitelist_message_length = 0;
     
-    int result = tesla_client_->buildWhiteListMessage(
+    int result = tesla_client_->build_white_list_message(
         role_enum, 
         VCSEC_KeyFormFactor_KEY_FORM_FACTOR_CLOUD_KEY,
         whitelist_message_buffer, 

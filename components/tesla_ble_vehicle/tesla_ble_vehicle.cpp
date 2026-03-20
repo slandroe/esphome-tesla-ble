@@ -31,7 +31,7 @@ void TeslaBLEVehicle::setup() {
     
     // Set VIN if provided
     if (!vin_.empty()) {
-        session_manager_->get_client()->setVIN(vin_.c_str());
+        session_manager_->get_client()->set_vin(vin_);
     }
     
     // Setup button callbacks
@@ -203,7 +203,7 @@ void TeslaBLEVehicle::set_vin(const char *vin) {
     
     // Only set in client if session manager is initialized
     if (session_manager_ && session_manager_->get_client()) {
-        session_manager_->get_client()->setVIN(vin);
+        session_manager_->get_client()->set_vin(vin_);
         ESP_LOGD(TAG, "VIN configured in Tesla client");
     } else {
         ESP_LOGD(TAG, "VIN stored for later configuration (session manager not ready)");
