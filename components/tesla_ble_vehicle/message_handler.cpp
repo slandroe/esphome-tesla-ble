@@ -1,11 +1,19 @@
 #include "message_handler.h"
 #include "tesla_ble_vehicle.h"
 #include <client.h>
+#include <pb_decode.h>
 #include "log.h"
 #include <esphome/core/helpers.h>
 
 namespace esphome {
 namespace tesla_ble_vehicle {
+
+static bool decode_vcsec_information_request(
+    const UniversalMessage_RoutableMessage_protobuf_message_as_bytes_t &payload,
+    VCSEC_InformationRequest &info_message) {
+    pb_istream_t stream = pb_istream_from_buffer(payload.bytes, payload.size);
+    return pb_decode(&stream, VCSEC_InformationRequest_fields, &info_message);
+}
 
 MessageHandler::MessageHandler(TeslaBLEVehicle* parent)
     : parent_(parent) {}
@@ -143,7 +151,40 @@ void MessageHandler::handle_vcsec_message(const UniversalMessage_RoutableMessage
             break;
             
         default:
-            ESP_LOGW(MESSAGE_HANDLER_TAG, "Unknown VCSEC message type");
+            VCSEC_InformationRequest info_message = VCSEC_InformationRequest_init_default;
+            if (decode_vcsec_information_request(message.payload.protobuf_message_as_bytes, info_message)) {
+                ESP_LOGI(MESSAGE_HANDLER_TAG, "Decoded fallback VCSEC InformationRequest");
+                switch (info_message.which_key) {
+                    case VCSEC_InformationRequest_keyId_tag:
+                        ESP_LOGI(MESSAGE_HANDLER_TAG, "VCSEC info request: type=%s, key_id=%s",
+                                 information_request_type_to_string(info_message.informationRequestType),
+                                 format_hex(info_message.key.keyId.publicKeySHA1.bytes,
+                                            info_message.key.keyId.publicKeySHA1.size).c_str());
+                        break;
+                    case VCSEC_InformationRequest_publicKey_tag:
+                        ESP_LOGI(MESSAGE_HANDLER_TAG, "VCSEC info request: type=%s, public_key_len=%u",
+                                 information_request_type_to_string(info_message.informationRequestType),
+                                 static_cast<unsigned>(info_message.key.publicKey.size));
+                        break;
+                    case VCSEC_InformationRequest_slot_tag:
+                        ESP_LOGI(MESSAGE_HANDLER_TAG, "VCSEC info request: type=%s, slot=%u",
+                                 information_request_type_to_string(info_message.informationRequestType),
+                                 static_cast<unsigned>(info_message.key.slot));
+                        break;
+                    default:
+                        ESP_LOGI(MESSAGE_HANDLER_TAG, "VCSEC info request: type=%s, which_key=%u",
+                                 information_request_type_to_string(info_message.informationRequestType),
+                                 static_cast<unsigned>(info_message.which_key));
+                        break;
+                }
+                log_information_request(MESSAGE_HANDLER_TAG, &info_message);
+            } else {
+                ESP_LOGW(MESSAGE_HANDLER_TAG, "Unknown VCSEC message type (which_sub_message=%u, %u bytes): %s",
+                         static_cast<unsigned>(vcsec_message.which_sub_message),
+                         static_cast<unsigned>(message.payload.protobuf_message_as_bytes.size),
+                         format_hex(message.payload.protobuf_message_as_bytes.bytes,
+                                    message.payload.protobuf_message_as_bytes.size).c_str());
+            }
             break;
     }
 }
