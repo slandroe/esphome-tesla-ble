@@ -1,2 +1,10 @@
-- components: [tesla_ble_vehicle, tesla_ble_listener]
-  source: github://slandroe/esphome-tesla-ble/components@main
+#- components: [tesla_ble_vehicle, tesla_ble_listener]
+#  source: github://slandroe/esphome-tesla-ble/components@main
+external_components:
+  - source:
+      type: git
+      url: https://github.com/slandroe/esphome-tesla-ble
+      ref: main
+    components:
+      - tesla_ble_vehicle
+      - tesla_ble_listener
